@@ -15,7 +15,7 @@ pico_sdk_init()
 
 add_executable(${PROJECT_NAME}  
         firmware.c # Código principal em C
-        lib/ssd1306.c # Biblioteca para o display OLED
+        lib/ssd1306/ssd1306.c # Biblioteca para o display OLED
         )
 
 target_link_libraries(${PROJECT_NAME} 

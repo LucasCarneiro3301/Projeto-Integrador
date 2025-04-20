@@ -2,56 +2,9 @@
     Aluno: Lucas Carneiro de Araújo Lima
 */
 
-#include <stdio.h>
-#include <stdlib.h> 
-#include <math.h>
-#include "pico/stdlib.h"
-#include "hardware/adc.h"
-#include "hardware/i2c.h"
-#include "hardware/irq.h" 
-#include "hardware/pwm.h" 
-#include "pico/bootrom.h"
-#include "lib/ssd1306.h"
-#include "lib/font.h"
-
-// Pinagem dos componentes
-#define I2C_PORT i2c1   // Define que o barramento I2C usado será o "i2c1"
-#define I2C_SDA 14      // Define que o pino GPIO 14 será usado como SDA (linha de dados do I2C)
-#define I2C_SCL 15      // Define que o pino GPIO 15 será usado como SCL (linha de clock do I2C)
-#define address 0x3C    // Define o endereço I2C do dispositivo (0x3C é o endereço padrão de muitos displays OLED SSD1306)
-#define JOY_Y 26        // Eixo Y do joystick 
-#define JOY_X 27        // Eixo X do joystick 
-#define BTNJ 22         // Botão do joystick
-#define BTNA 5          // Botão A
-#define BTNB 6          // Botão B
-#define RED 13          // LED vermelho
-#define BLUE 12         // LED azul
-#define GREEN 11        // LED verde
-
-// Parâmetros do PWM 
-/*
-    fpwm = fckl / (di * (wrap + 1)), fpwm = 1KHz (Tpwm = 1ms)
-    wrap = 4095, normalizar com os nívels ADC
-    1KHz = 125Mhz/(div*(4095 + 1))
-    1KHz = 30.52KHz/div
-    1KHz*div = 30.52KHz
-    div = 30.52KHz/1KHz
-    div = 30.52
-*/
-#define WRAP 4095 // Wrap
-#define DIV 30.52 // Divisor inteiro
-
-#define PWM_MAX 4095
-
-#define DISPLAY_WIDTH 128   // Largura do display
-#define DISPLAY_HEIGHT 64   // Altura do display
-
-// Valores calibrados
-#define X_MIN 18
-#define X_MAX 4084
-#define Y_MIN 595 
-#define Y_MAX 3350
-
+#include "lib/config/config.h"
+#include "lib/utils/map_and_scale.h"
+#include "lib/utils/update_led_color.h"
 
 uint8_t mode = 0;           // Modos de operação (Idle, Cold, Relax, Work, Guest)
 
@@ -72,12 +25,7 @@ bool reset = false;         // True para modo de gravação
 
 static volatile uint32_t last_time = 0; // Armazena o tempo do último evento (em microssegundos)
 
-void setup(); // Prototipação da função que define os LEDs RGB como saídas e os botões como entradas
-void i2c_setup();
-void pwm_setup();
-void ssd1306_setup(ssd1306_t* ssd);
 void gpio_irq_handler(uint gpio, uint32_t events);
-void adc_setup();
 
 // Retorna a leitura de um determinado canal ADC
 uint16_t select_adc_channel(unsigned short int channel) {
@@ -85,86 +33,11 @@ uint16_t select_adc_channel(unsigned short int channel) {
     return adc_read();
 }
 
-int map_range(int x, int in_min, int in_max, int out_min, int out_max) {
-    if (x < in_min) x = in_min;
-    if (x > in_max) x = in_max;
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-// Verifica se o visor está dentro de um retângulo
-bool is_inside(int visor_left, int visor_top, int rect_left, int rect_top, int rect_width, int rect_height) {
-    return 
-        visor_left >= rect_left &&
-        visor_left + box <= rect_left + rect_width &&
-        visor_top >= rect_top &&
-        visor_top + box <= rect_top + rect_height;
-}
-
-// Calcula intensidade verde com base na distância ao centro da faixa de operação
-int calculate_intensity(int visor_left, int visor_top, int box, int center_x, int center_y, int max_dist_squared) {
-    int visor_center_x = visor_left + box / 2;
-    int visor_center_y = visor_top + box / 2;
-    int dx = visor_center_x - center_x;
-    int dy = visor_center_y - center_y;
-    int dist_sq = dx * dx + dy * dy;
-
-    float normalized = (float)dist_sq / (float)max_dist_squared;
-
-    if (normalized < 0.05f)
-        return PWM_MAX * 0.5f;      // 100%
-    else if (normalized < 0.15f)
-        return PWM_MAX * 0.375f;    // 75%
-    else if (normalized < 0.30f)
-        return PWM_MAX * 0.25f;     // 50%
-    else if (normalized < 0.50f)
-        return PWM_MAX * 0.125f;    // 25%
-    else if (normalized < 1.0f)
-        return PWM_MAX * 0.0625f;   // 10%
-
-    return 0;
-}
-
-// Atualiza os níveis dos LEDs com base na posição do visor
-void update_led_color(int visor_left, int visor_top, int box, int rect_left, int rect_top, int rect_width, int rect_height, int tol_left, int tol_top, int tol_width, int tol_height) {
-    int center_x = rect_left + rect_width / 2;
-    int center_y = rect_top + rect_height / 2;
-
-    int max_radius_x = rect_width / 2;
-    int max_radius_y = rect_height / 2;
-    int max_dist_squared = max_radius_x * max_radius_x + max_radius_y * max_radius_y;
-
-    bool in_operation = is_inside(visor_left, visor_top, rect_left, rect_top, rect_width, rect_height);
-    bool in_tolerance = is_inside(visor_left, visor_top, tol_left, tol_top, tol_width, tol_height);
-
-    if (in_operation) {         // Faixa de operação: Níveis de intensidade do LED verde
-        int level = calculate_intensity(visor_left, visor_top, box, center_x, center_y, max_dist_squared);
-        pwm_set_gpio_level(GREEN, level);
-        pwm_set_gpio_level(RED, 0);
-        pwm_set_gpio_level(BLUE, 0);
-    }
-    else if (in_tolerance) {    // Faixa de tolerância: LED amarelo
-        pwm_set_gpio_level(GREEN, PWM_MAX / 4);
-        pwm_set_gpio_level(RED, PWM_MAX / 4);
-        pwm_set_gpio_level(BLUE, 0);
-    }
-    else {                      // Fora dos limites: LED vermelho
-        pwm_set_gpio_level(RED, PWM_MAX / 4);
-        pwm_set_gpio_level(GREEN, 0);
-        pwm_set_gpio_level(BLUE, 0);
-    }
-}
-
-
 int main() {
     ssd1306_t ssd;
     bool color = true;
     
-    stdio_init_all();       // Inicialização dos recursos de entrada e saída padrão
-    adc_setup();            // Inicialização e configuração dos pinos ADC
-    setup();                // Inicialização e configuração dos LEDs e botões 
-    i2c_setup();            // Inicialização e configuração da comunicação serial I2C 
-    pwm_setup();            // Inicialização e configuração do PWM
-    ssd1306_setup(&ssd);    // Inicializa a estrutura do display
+    config(&ssd);
     
     gpio_set_irq_enabled_with_callback(BTNJ, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler); //Callback de interrupção do Botão do Joystick
     gpio_set_irq_enabled_with_callback(BTNA, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler); //Callback de interrupção do Botão A
@@ -178,8 +51,8 @@ int main() {
             uint16_t x = select_adc_channel(1);
             uint16_t y = select_adc_channel(0);
 
-            uint8_t display_x = map_range(x, X_MIN, X_MAX, 0, DISPLAY_WIDTH - box);
-            uint8_t display_y = map_range(y, Y_MIN, Y_MAX, DISPLAY_HEIGHT - box, 0);
+            uint8_t display_x = map_and_scale(x, X_MIN, X_MAX, 0, DISPLAY_WIDTH - box);
+            uint8_t display_y = map_and_scale(y, Y_MIN, Y_MAX, DISPLAY_HEIGHT - box, 0);
     
             ssd1306_fill(&ssd, !color);                                                     // Limpa ou mostra a tela
             ssd1306_rect(&ssd, top, left, rect_width, rect_height, color, !color);          // Faixa de operação
@@ -205,74 +78,6 @@ int main() {
             reset_usb_boot(0,0);    // Sai para o modo de gravação
         }
     }
-}
-
-// Inicializa e configura os LEDs RGB como saída. Inicializa e configura os botões como entradas.
-void setup() {
-    gpio_init(BTNA);
-    gpio_set_dir(BTNA, GPIO_IN);
-    gpio_pull_up(BTNA);  
-  
-    gpio_init(BTNB);
-    gpio_set_dir(BTNB, GPIO_IN);
-    gpio_pull_up(BTNB);  
-
-    gpio_init(BTNJ);
-    gpio_set_dir(BTNJ, GPIO_IN);
-    gpio_pull_up(BTNJ); 
-}
-
-// Inicializa e configura os pinos do joystick como periféricos ADC
-void adc_setup() {
-    adc_init();
-    adc_gpio_init(JOY_Y);
-    adc_gpio_init(JOY_X);
-}
-
-// Inicializa e configura a comunicação serial I2C 
-void i2c_setup() {
-    i2c_init(I2C_PORT, 4e2 * 1e3); // Inicialização I2C.
-  
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C); // Define a função do pino GPIO para I2C
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C); // Define a função do pino GPIO para I2C
-    gpio_pull_up(I2C_SDA); // Pull up para linha de dados
-    gpio_pull_up(I2C_SCL); // Pull up para linha de clock
-}
-
-// Limpa o display
-void clear(ssd1306_t* ssd) {
-    ssd1306_fill(ssd, false);
-    ssd1306_send_data(ssd);
-}
-
-// Inicializa e configura o display
-void ssd1306_setup(ssd1306_t* ssd) {
-    ssd1306_init(ssd, WIDTH, HEIGHT, false, address, I2C_PORT); 
-    ssd1306_config(ssd); 
-    ssd1306_send_data(ssd);
-    clear(ssd);
-
-  
-    ssd1306_draw_char(ssd, '#', 28, 60);  
-    ssd1306_send_data(ssd);
-}
-
-// Inicializa e configura os pinos 13 e 12 como PWM
-void pwm_setup() {
-    gpio_set_function(GREEN, GPIO_FUNC_PWM); // Define o pino como PWM
-    gpio_set_function(RED, GPIO_FUNC_PWM); // Define o pino como PWM
-
-    uint slice_blue = pwm_gpio_to_slice_num(GREEN); // Obtém o slice
-    uint slice_red = pwm_gpio_to_slice_num(RED); // Obtém o slice
-    
-    pwm_set_clkdiv(slice_blue, DIV); // Define o divisor inteiro de clock
-    pwm_set_wrap(slice_blue, WRAP); // Define o wrap
-    pwm_set_enabled(slice_blue, true);
-
-    pwm_set_clkdiv(slice_red, DIV); // Define o divisor inteiro de clock
-    pwm_set_wrap(slice_red, WRAP); // Define o wrap
-    pwm_set_enabled(slice_red, true);
-    
 }
 
 // Função de interrupção com debouncing
