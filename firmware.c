@@ -4,6 +4,7 @@
 
 #include "lib/config/config.h"
 #include "lib/utils/map_and_scale.h"
+#include "lib/utils/draw_visor.h"
 #include "lib/utils/update_led_color.h"
 
 uint8_t mode = 0;           // Modos de operação (Idle, Cold, Relax, Work, Guest)
@@ -20,7 +21,7 @@ uint8_t tol_top = 0;        // Distância do topo da da faixa de tolerância
 
 uint8_t box  = 8;           // Tamanho do visor (1 ou 8)
 
-bool res = true;            // Resolução (1x1 ou 8x8)
+uint8_t res = 3;            // Resolução (1x1, 2x2, 4x4 ou 8x8)
 bool reset = false;         // True para modo de gravação
 
 static volatile uint32_t last_time = 0; // Armazena o tempo do último evento (em microssegundos)
@@ -58,10 +59,7 @@ int main() {
             ssd1306_rect(&ssd, top, left, rect_width, rect_height, color, !color);          // Faixa de operação
             ssd1306_rect(&ssd, tol_top, tol_left, tol_width, tol_height, color, !color);    // Faixa de tolerância
 
-            if(res)
-                ssd1306_draw_string(&ssd, "#", display_x, display_y);   // Movimenta o quadrado ao longo da tela   
-            else
-                ssd1306_pixel(&ssd, display_x, display_y, color);       // Movimenta o pixel ao longo da tela
+            draw_visor(display_x,display_y,box,color,&ssd);
 
             ssd1306_send_data(&ssd);    // Atualiza o display 
     
@@ -126,8 +124,8 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
             tol_top = (!mode) ? top : top - 3;
         }
         else if(gpio == BTNB) {
-            res = !res;
-            box = (res) ? 8 : 1;
+            res = (res + 1)%4;
+            box = pow(2, res);
         } 
         else if(gpio == BTNJ) {
             reset = true;
