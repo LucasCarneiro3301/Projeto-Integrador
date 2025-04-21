@@ -6,6 +6,8 @@
 #include "lib/utils/map_and_scale.h"
 #include "lib/utils/draw_visor.h"
 #include "lib/utils/update_led_color.h"
+#include "lib/utils/values_position.h"
+#include "lib/utils/calc_temp_and_lum.h"
 
 uint8_t mode = 0;           // Modos de operação (Idle, Cold, Relax, Work, Guest)
 
@@ -35,6 +37,8 @@ uint16_t select_adc_channel(unsigned short int channel) {
 }
 
 int main() {
+    float avg_temp, avg_lum;
+    char str[16];  // Buffer para armazenar a string
     ssd1306_t ssd;
     bool color = true;
     
@@ -48,7 +52,7 @@ int main() {
     uint slice_red = pwm_gpio_to_slice_num(RED);    // Slice PWM do pino 13
 
     while (true) {
-        if(!reset) {
+        if(!reset) { 
             uint16_t x = select_adc_channel(1);
             uint16_t y = select_adc_channel(0);
 
@@ -60,11 +64,14 @@ int main() {
             ssd1306_rect(&ssd, tol_top, tol_left, tol_width, tol_height, color, !color);    // Faixa de tolerância
 
             draw_visor(display_x,display_y,box,color,&ssd);
-
-            ssd1306_send_data(&ssd);    // Atualiza o display 
     
             update_led_color(display_x, display_y, box, left, top, rect_width, rect_height, tol_left, tol_top, tol_width, tol_height);
 
+            calc_temp_and_lum(display_x,display_y,box,&avg_temp,&avg_lum);
+
+            values_position(&ssd, avg_temp, avg_lum, mode);
+
+            ssd1306_send_data(&ssd);    // Atualiza o display 
         } else {
             printf("Saindo para o modo de gravação...\n\n");
 
