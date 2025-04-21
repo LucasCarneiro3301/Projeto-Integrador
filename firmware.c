@@ -64,10 +64,10 @@ int main() {
             ssd1306_rect(&ssd, tol_top, tol_left, tol_width, tol_height, color, !color);    // Faixa de tolerância
 
             draw_visor(display_x,display_y,box,color,&ssd);
-    
-            update_led_color(display_x, display_y, box, left, top, rect_width, rect_height, tol_left, tol_top, tol_width, tol_height);
 
             calc_temp_and_lum(display_x,display_y,box,&avg_temp,&avg_lum);
+
+            update_led_color(avg_temp, avg_lum, mode);
 
             values_position(&ssd, avg_temp, avg_lum, mode);
 
