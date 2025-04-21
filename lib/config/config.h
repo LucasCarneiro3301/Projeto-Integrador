@@ -14,6 +14,7 @@
 #include "hardware/irq.h" 
 #include "hardware/pwm.h" 
 #include "pico/bootrom.h"
+#include "ws2812.pio.h"
 #include "../ssd1306/ssd1306.h"
 #include "../ssd1306/font.h"
 
@@ -30,6 +31,11 @@
 #define RED 13          // LED vermelho
 #define BLUE 12         // LED azul
 #define GREEN 11        // LED verde
+#define BUZZER 21 
+#define WS2812_PIN 7 // Matriz de LEDs 5x5
+
+#define NUM_PIXELS 25 // 5x5 = 25
+#define IS_RGBW false
 
 // Parâmetros do PWM 
 /*
@@ -52,6 +58,9 @@
 #define X_MAX 4084
 #define Y_MIN 595 
 #define Y_MAX 3350
+
+PIO pio = pio0;
+int sm = 0;
 
 // Inicializa e configura os LEDs RGB como saída. Inicializa e configura os botões como entradas.
 void setup() {
@@ -107,9 +116,11 @@ void ssd1306_setup(ssd1306_t* ssd) {
 void pwm_setup() {
     gpio_set_function(GREEN, GPIO_FUNC_PWM); // Define o pino como PWM
     gpio_set_function(RED, GPIO_FUNC_PWM); // Define o pino como PWM
+    gpio_set_function(BUZZER, GPIO_FUNC_PWM); // Define o pino como PWM
 
     uint slice_blue = pwm_gpio_to_slice_num(GREEN); // Obtém o slice
     uint slice_red = pwm_gpio_to_slice_num(RED); // Obtém o slice
+    uint slice_buzzer = pwm_gpio_to_slice_num(BUZZER); // Obtém o slice
     
     pwm_set_clkdiv(slice_blue, DIV); // Define o divisor inteiro de clock
     pwm_set_wrap(slice_blue, WRAP); // Define o wrap
@@ -118,7 +129,17 @@ void pwm_setup() {
     pwm_set_clkdiv(slice_red, DIV); // Define o divisor inteiro de clock
     pwm_set_wrap(slice_red, WRAP); // Define o wrap
     pwm_set_enabled(slice_red, true);
-    
+
+    pwm_set_clkdiv(slice_buzzer, DIV); // Define o divisor inteiro de clock
+    pwm_set_wrap(slice_buzzer, WRAP); // Define o wrap
+    pwm_set_enabled(slice_buzzer, true);
+}
+
+// Inicializa e configura a matriz de LEDs 5x5 
+void ws2812_setup(PIO pio, uint sm) {
+    uint offset = pio_add_program(pio, &ws2812_program);
+  
+    ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, IS_RGBW); //Inicializa a matriz de leds
 }
 
 void config(ssd1306_t *ssd) {
@@ -128,6 +149,7 @@ void config(ssd1306_t *ssd) {
     i2c_setup();            // Inicialização e configuração da comunicação serial I2C 
     pwm_setup();            // Inicialização e configuração do PWM
     ssd1306_setup(ssd);    // Inicializa a estrutura do display
+    ws2812_setup(pio, sm);
 }
 
 #endif

@@ -5,9 +5,10 @@
 #include "lib/config/config.h"
 #include "lib/utils/map_and_scale.h"
 #include "lib/utils/draw_visor.h"
-#include "lib/utils/update_led_color.h"
+#include "lib/utils/update_led_matrix_and_buzzer.h"
 #include "lib/utils/values_position.h"
 #include "lib/utils/calc_temp_and_lum.h"
+#include "lib/ws2812/symbol.h"
 
 uint8_t mode = 0;           // Modos de operação (Idle, Cold, Relax, Work, Guest)
 
@@ -43,6 +44,8 @@ int main() {
     bool color = true;
     
     config(&ssd);
+
+    symbol('*');
     
     gpio_set_irq_enabled_with_callback(BTNJ, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler); //Callback de interrupção do Botão do Joystick
     gpio_set_irq_enabled_with_callback(BTNA, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler); //Callback de interrupção do Botão A
@@ -66,7 +69,7 @@ int main() {
 
             calc_temp_and_lum(display_x,display_y,box,&avg_temp,&avg_lum);
 
-            update_led_color(avg_temp, avg_lum, mode, &state);
+            update_led_matrix_and_buzzer(avg_temp, avg_lum, mode, &state);
 
             values_position(&ssd, avg_temp, avg_lum, mode);
 
@@ -78,6 +81,8 @@ int main() {
             ssd1306_draw_string(&ssd, "MODO DE", 28, 28); 
             ssd1306_draw_string(&ssd, "GRAVACAO", 24, 40);
             ssd1306_send_data(&ssd);    // Envia os dados para o display
+
+            symbol('*');
 
             reset_usb_boot(0,0);    // Sai para o modo de gravação
         }
