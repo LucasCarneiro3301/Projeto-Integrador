@@ -133,10 +133,10 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
                 top = 10;           // 64 - (25-14)*4.92 = 9.88 px
             }
 
-            tol_width = (!mode) ? rect_width : rect_width + 6;      // Largura de tolerância
-            tol_height = (!mode) ? rect_height : rect_height + 6;   // Altura de tolerância
-            tol_left = (!mode) ? left : left - 3;
-            tol_top = (!mode) ? top : top - 3;
+            tol_width = (!mode) ? rect_width : rect_width + 8;      // Largura de tolerância
+            tol_height = (!mode) ? rect_height : rect_height + 10;   // Altura de tolerância
+            tol_left = (!mode) ? left : left - 4;
+            tol_top = (!mode) ? top : top - 5;
         }
         else if(gpio == BTNB) {
             res = (res + 1)%4;

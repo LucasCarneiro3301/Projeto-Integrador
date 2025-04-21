@@ -66,7 +66,7 @@ uint16_t calc_intensity(float avg_temp, float avg_lum, uint8_t mode) {
 void update_led_matrix_and_buzzer(float avg_temp, float avg_lum, uint8_t mode, uint8_t *state) {
     uint8_t last_state = *state;
     bool in_operation = is_valid(avg_temp,avg_lum,mode,0,0);
-    bool in_tolerance = is_valid(avg_temp,avg_lum,mode,3/4.92,3/0.122);
+    bool in_tolerance = is_valid(avg_temp,avg_lum,mode,1.016,32.813);
 
     if (in_operation) {         // Faixa de operação: Níveis de intensidade do LED verde
         uint16_t level = calc_intensity(avg_temp, avg_lum, mode);
