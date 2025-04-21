@@ -37,8 +37,8 @@ uint16_t select_adc_channel(unsigned short int channel) {
 }
 
 int main() {
+    uint8_t state = 3;
     float avg_temp, avg_lum;
-    char str[16];  // Buffer para armazenar a string
     ssd1306_t ssd;
     bool color = true;
     
@@ -48,8 +48,7 @@ int main() {
     gpio_set_irq_enabled_with_callback(BTNA, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler); //Callback de interrupção do Botão A
     gpio_set_irq_enabled_with_callback(BTNB, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler); //Callback de interrupção do Botão B
 
-    uint slice_blue = pwm_gpio_to_slice_num(BLUE);  // Slice PWM do pino 12
-    uint slice_red = pwm_gpio_to_slice_num(RED);    // Slice PWM do pino 13
+    printf("MODO DE OPERAÇÃO: O sistema entrou no modo IDLE (14° à 27°, 50 lux à 1100 lux)!!!\n\n");
 
     while (true) {
         if(!reset) { 
@@ -67,7 +66,7 @@ int main() {
 
             calc_temp_and_lum(display_x,display_y,box,&avg_temp,&avg_lum);
 
-            update_led_color(avg_temp, avg_lum, mode);
+            update_led_color(avg_temp, avg_lum, mode, &state);
 
             values_position(&ssd, avg_temp, avg_lum, mode);
 
@@ -94,31 +93,35 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
         if(gpio == BTNA) {
             mode = (mode + 1)%5;
             if (mode==0) {          // Modo Idle
+                printf("MODO DE OPERAÇÃO: O sistema entrou no modo IDLE (14° à 27°, 50 lux à 1100 lux)!!!\n\n");
                 rect_width = 128;   // 0 px à 128 px = 50 lux à 1100 lux    (128/1050=0.122 px/lux)
                 rect_height = 64;   // 0 px à 64 px = 14° à 26°             (64/13=4.92 px/C°)
                 left = 0;           // 0 px = 50 lux min
                 top = 0;            // 64 px = 27° max
-
             }
             else if(mode==1) {      // Modo Cold
+                printf("MODO DE OPERAÇÃO: O sistema entrou no modo COLD (16° à 18°, 100 lux à 400 lux)!!!\n\n");
                 rect_width = 37;    // (400-100)*0.122 = 36.6 px
                 rect_height = 10;   // (18-16)*4.92 = 9.84 px
                 left = 6;           // (100-50)*0.122 = 6.1 px
                 top = 44;           // 64 - (18-14)*4.92 = 44.32 px
             }
             else if(mode==2) {      // Modo Relax
+                printf("MODO DE OPERAÇÃO: O sistema entrou no modo RELAX (18° à 20°, 100 lux à 400 lux)!!!\n\n");
                 rect_width = 37;    // (400-100)*0.122 = 36.6 px
                 rect_height = 10;   // (20-18)*4.92 = 9.84 px
                 left = 6;           // (100-50)*0.122 - 0 = 6.1 px
                 top = 35;           // 64 - (20-14)*4.92 = 34.48 px
             }
             else if(mode==3) {      // Modo Work
+                printf("MODO DE OPERAÇÃO: O sistema entrou no modo WORK (20° à 25°, 600 lux à 1000 lux)!!!\n\n");
                 rect_width = 49;    // (1000-600)*0.122 = 48.8 px
                 rect_height = 25;   // (25-20)*4.92 = 24.6 px
                 left = 67;          // (600-50)*0.122 - 0 = 67.1 px
                 top = 10;           // 64 - (25-14)*4.92 = 9.88 px
             }
             else if(mode==4) {      // Modo Guest
+                printf("MODO DE OPERAÇÃO: O sistema entrou no modo GUEST (20° à 25°, 300 lux à 700 lux)!!!\n\n");
                 rect_width = 49;    // (700-300)*0.122 = 48.8 px
                 rect_height = 25;   // (25-20)*4.92 = 24.6 px
                 left = 31;          // (300-50)*0.122 - 0 = 30.5 px
@@ -133,6 +136,8 @@ void gpio_irq_handler(uint gpio, uint32_t events) {
         else if(gpio == BTNB) {
             res = (res + 1)%4;
             box = pow(2, res);
+
+            printf("RESOLUÇÃO: A resolução do sistema foi alterada para %ix%i!!!\n\n", box, box);
         } 
         else if(gpio == BTNJ) {
             reset = true;

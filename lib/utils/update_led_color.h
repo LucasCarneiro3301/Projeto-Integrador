@@ -62,7 +62,8 @@ uint16_t calc_intensity(float avg_temp, float avg_lum, uint8_t mode) {
 
 
 // Atualiza os níveis dos LEDs com base na posição do visor
-void update_led_color(float avg_temp, float avg_lum, uint8_t mode) {
+void update_led_color(float avg_temp, float avg_lum, uint8_t mode, uint8_t *state) {
+    uint8_t last_state = *state;
     bool in_operation = is_valid(avg_temp,avg_lum,mode,0,0);
     bool in_tolerance = is_valid(avg_temp,avg_lum,mode,3/4.92,3/0.122);
 
@@ -71,15 +72,25 @@ void update_led_color(float avg_temp, float avg_lum, uint8_t mode) {
         pwm_set_gpio_level(GREEN, level/2);
         pwm_set_gpio_level(RED, 0);
         pwm_set_gpio_level(BLUE, 0);
+        *state = 0;
     }
     else if (in_tolerance) {    // Faixa de tolerância: LED amarelo
         pwm_set_gpio_level(GREEN, 4095 / 4);
         pwm_set_gpio_level(RED, 4095 / 4);
         pwm_set_gpio_level(BLUE, 0);
+        *state = 1;
     }
     else {                      // Fora dos limites: LED vermelho
         pwm_set_gpio_level(RED, 4095 / 4);
         pwm_set_gpio_level(GREEN, 0);
         pwm_set_gpio_level(BLUE, 0);
+        *state = 2;
     }
+    
+    if(*state==0 && *state != last_state)
+        printf("SUCESSO: O sistema está funcionando dentro da faixa de operação!!!\n\n");
+    else if(*state==1 && *state != last_state)
+        printf("AVISO: O sistema está funcionando dentro da faixa de tolerância!!!\n\n");
+    else if(*state==2 && *state != last_state)
+        printf("ERRO: O sistema está fora dos limites permitidos!!!\n\n");
 }
