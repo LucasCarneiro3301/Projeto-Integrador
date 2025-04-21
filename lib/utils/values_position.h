@@ -4,6 +4,8 @@
 
 #include "../config/config.h"
 
+
+// Ajusta a posição dos valores de temperatura e luminosidade conforme a posição do cursor na tela e o modo de operação atual
 void values_position(ssd1306_t *ssd, float avg_temp, float avg_lum, uint8_t mode) {
     char temp[10], lum[10];
 

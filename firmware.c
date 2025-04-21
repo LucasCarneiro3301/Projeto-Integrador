@@ -4,7 +4,7 @@
 
 #include "lib/config/config.h"
 #include "lib/utils/map_and_scale.h"
-#include "lib/utils/draw_visor.h"
+#include "lib/utils/draw_cursor.h"
 #include "lib/utils/update_led_matrix_and_buzzer.h"
 #include "lib/utils/values_position.h"
 #include "lib/utils/calc_temp_and_lum.h"
@@ -55,25 +55,25 @@ int main() {
 
     while (true) {
         if(!reset) { 
-            uint16_t x = select_adc_channel(1);
-            uint16_t y = select_adc_channel(0);
+            uint16_t x = select_adc_channel(1);                                             // Obtém o valor adc do eixo X
+            uint16_t y = select_adc_channel(0);                                             // Obtém o valor adc do eixo Y
 
-            uint8_t display_x = map_and_scale(x, X_MIN, X_MAX, 0, DISPLAY_WIDTH - box);
-            uint8_t display_y = map_and_scale(y, Y_MIN, Y_MAX, DISPLAY_HEIGHT - box, 0);
+            uint8_t display_x = map_and_scale(x, X_MIN, X_MAX, 0, DISPLAY_WIDTH - box);     // Escalona o eixo X
+            uint8_t display_y = map_and_scale(y, Y_MIN, Y_MAX, DISPLAY_HEIGHT - box, 0);    // Escalona o eixo Y
     
             ssd1306_fill(&ssd, !color);                                                     // Limpa ou mostra a tela
             ssd1306_rect(&ssd, top, left, rect_width, rect_height, color, !color);          // Faixa de operação
             ssd1306_rect(&ssd, tol_top, tol_left, tol_width, tol_height, color, !color);    // Faixa de tolerância
 
-            draw_visor(display_x,display_y,box,color,&ssd);
+            draw_cursor(display_x,display_y,box,color,&ssd);                                // Desenha o cursor na tela
 
-            calc_temp_and_lum(display_x,display_y,box,&avg_temp,&avg_lum);
+            calc_temp_and_lum(display_x,display_y,box,&avg_temp,&avg_lum);                  // Calcula a temperatura e luminosidade
 
-            update_led_matrix_and_buzzer(avg_temp, avg_lum, mode, &state);
+            update_led_matrix_and_buzzer(avg_temp, avg_lum, mode, &state);                  // Atualiza o estado do LED, matriz e buzzer
 
-            values_position(&ssd, avg_temp, avg_lum, mode);
+            values_position(&ssd, avg_temp, avg_lum, mode);                                 // Atualiza a posição dos valores no display
 
-            ssd1306_send_data(&ssd);    // Atualiza o display 
+            ssd1306_send_data(&ssd);                                                        // Atualiza o display 
         } else {
             printf("Saindo para o modo de gravação...\n\n");
 
