@@ -30,14 +30,17 @@ git clone https://github.com/LucasCarneiro3301/Projeto-Integrador.git
 ### 2. Configure o ambiente de desenvolvimento
 Certifique-se de que o [SDK do Raspberry Pi Pico](https://github.com/raspberrypi/pico-sdk) esteja instalado e configurado corretamente no seu sistema.
 
-### 3. Conexão com a Rapberry Pico
+### 3. Instale o CMake
+Certifique-se de que o [CMake](https://cmake.org/download/) esteja instalado e configurado corretamente no seu sistema.
+
+### 4. Conexão com a Rapberry Pico
 1. Conecte o Raspberry Pi Pico ao seu computador via USB.
 2. Inicie o modo de gravação pressionando o botão **BOOTSEL** e **RESTART**.
 3. O Pico será montado como um dispositivo de armazenamento USB.
 4. Execute através do comando **RUN** a fim de copiar o arquivo `firmware.uf2` para o Pico.
 5. O Pico reiniciará automaticamente e executará o programa.
 
-### 4. Observações (IMPORTANTE !!!)
+### 5. Observações (IMPORTANTE !!!)
 2. Manuseie a placa com cuidado.
 
 ## Recursos e Funcionalidades
