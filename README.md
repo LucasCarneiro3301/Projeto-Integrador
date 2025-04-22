@@ -37,7 +37,7 @@ Certifique-se de que o [CMake](https://cmake.org/download/) esteja instalado e c
 1. Conecte o Raspberry Pi Pico ao seu computador via USB.
 2. Inicie o modo de gravação pressionando o botão **BOOTSEL** e **RESTART**.
 3. O Pico será montado como um dispositivo de armazenamento USB.
-4. Execute através do comando **RUN** a fim de copiar o arquivo `firmware.uf2` para o Pico.
+4. Execute através do comando **RUN** a fim de copiar o arquivo `Projeto_Integrador.uf2` para o Pico.
 5. O Pico reiniciará automaticamente e executará o programa.
 
 ### 5. Observações (IMPORTANTE !!!)
